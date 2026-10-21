@@ -64,7 +64,8 @@ else
   command -v curl >/dev/null || { red "curl is required"; exit 1; }
 
   TOKEN="$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
-  PROBE_NAME=".php2shell-check-${TOKEN:0:12}.php"
+  # No leading dot: many Nginx/Apache configs deny dotfiles
+  PROBE_NAME="php2shell-check-${TOKEN:0:12}.php"
   PROBE_PATH="${WEBROOT%/}/$PROBE_NAME"
 
   cleanup() { rm -f -- "$PROBE_PATH"; }
@@ -84,7 +85,7 @@ else
   if [[ "$(get probe)" != "ok" ]]; then
     red "Could not read the probe through the web server (HTTP ${HTTP_CODE:-?})."
     echo "Check that --webroot is the document root served at --url, and that .php files are executed there."
-    echo "If the site serves PHP raw or blocks dotfiles, run with --cli as a fallback."
+    echo "If PHP is only executed through a front controller (index.php rewrites), run with --cli as a fallback."
     exit 1
   fi
 fi
@@ -119,6 +120,9 @@ if [[ "$SESSION_EXT" != 1 ]]; then
 elif [[ "$UPLOAD_PROGRESS" == 1 ]]; then
   red "EXPOSED (likely): session.upload_progress.enabled is On."
   echo "Apply the interim mitigation for your stack: see mitigations/ in this repo."
+  if [[ "$SAPI" == fpm-fcgi || "$SAPI" == cgi-fcgi ]]; then
+    echo "Just added a .user.ini? PHP caches it for up to 5 minutes (user_ini.cache_ttl). Reload PHP-FPM or wait, then re-run."
+  fi
   exit 2
 else
   green "MITIGATED (interim): session.upload_progress.enabled is Off."

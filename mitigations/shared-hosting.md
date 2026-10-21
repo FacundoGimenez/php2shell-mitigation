@@ -43,7 +43,9 @@ If PHP runs as mod_php, use `.htaccess` instead:
 php_flag session.upload_progress.enabled off
 ```
 
-Allow up to 5 minutes for `.user.ini` to apply, then [verify through the web](../scripts/check-exposure.sh).
+PHP caches `.user.ini` for up to 5 minutes, so wait before you [verify through the web](../scripts/check-exposure.sh). `.htaccess` changes under mod_php apply immediately.
+
+If you're not sure which one applies, add the `.user.ini`, wait 5 minutes and run the check. If it still reports EXPOSED, try the `.htaccess` (on PHP-FPM a bare `php_flag` returns a 500 error, so remove it if the site breaks).
 
 ## PHP 8.1 or older
 

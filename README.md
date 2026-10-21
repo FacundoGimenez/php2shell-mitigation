@@ -67,6 +67,8 @@ Interim mitigations, exposure checks and detection helpers for **php2shell**
 
 The scripts only read state from your own systems. None of them attempt to exploit anything.
 
+`watch-php-children.sh` polls the process table, so it can miss commands that finish in a few milliseconds (a quick `id` or a failing `curl`). It is a lightweight first line of detection. For full coverage, use auditd `execve` rules or an eBPF tool.
+
 ```bash
 git clone https://github.com/FacundoGimenez/php2shell-mitigation
 cd php2shell-mitigation
@@ -75,6 +77,20 @@ sudo ./scripts/check-exposure.sh --webroot /var/www/html --url https://example.c
 sudo ./scripts/watch-php-children.sh
 sudo ./scripts/find-recent-php.sh /var/www/html 3
 ```
+
+## Tested on
+
+Ubuntu 24.04 with PHP 8.3:
+
+| Setup | Mitigations verified |
+|---|---|
+| Nginx + PHP-FPM | `conf.d` drop-in, pool `php_admin_flag`, `.user.ini` |
+| Apache + mod_php | `conf.d` drop-in, vhost `php_admin_flag`, `.htaccess` |
+| Apache + PHP-FPM | `conf.d` drop-in, `.user.ini` |
+
+For each one, the check script was run through the web server, and a real multipart upload was used to confirm that upload progress is no longer recorded in the session, not just that `ini_get()` reports Off.
+
+The **LiteSpeed**, **Docker** and **cPanel/Plesk** instructions follow each platform's documented config layout but have **not been tested yet**. Reports and fixes are welcome.
 
 ## Sources
 

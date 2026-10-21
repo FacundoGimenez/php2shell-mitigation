@@ -54,7 +54,27 @@ sudo systemctl restart apache2     # httpd on RHEL
 </IfModule>
 ```
 
-Requires `AllowOverride Options` (or `All`). With PHP-FPM, `php_flag` in `.htaccess` causes a 500 error; use `.user.ini` instead.
+Requires `AllowOverride Options` (or `All`) for that directory. Debian and Ubuntu ship with `AllowOverride None` under `/var/www`, and in that case Apache **silently ignores** the file, so always verify afterwards.
+
+**This only works with mod_php.** Under PHP-FPM, a bare `php_flag` line causes a 500 error, and the `<IfModule>`-wrapped version above is silently skipped, so the site stays exposed. With FPM, use `.user.ini` instead (see below).
+
+## `.user.ini` (PHP-FPM / CGI, no root access)
+
+Create `.user.ini` in the document root:
+
+```ini
+session.upload_progress.enabled = 0
+```
+
+PHP caches `.user.ini` for `user_ini.cache_ttl` seconds (300 by default). Reload PHP-FPM if you can. If you can't, wait 5 minutes before running the check, because a check run right away can still report EXPOSED.
+
+Apache does not block `.user.ini` from being downloaded by default. Add this to the vhost or `.htaccess`:
+
+```apache
+<Files ".user.ini">
+    Require all denied
+</Files>
+```
 
 ## PHP-FPM behind Apache
 

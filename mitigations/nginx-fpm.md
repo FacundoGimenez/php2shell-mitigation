@@ -47,7 +47,15 @@ Create `.user.ini` in the document root:
 session.upload_progress.enabled = 0
 ```
 
-`.user.ini` is cached for `user_ini.cache_ttl` seconds (300 by default), so it may take up to 5 minutes to take effect.
+PHP caches `.user.ini` for `user_ini.cache_ttl` seconds (300 by default). Reload PHP-FPM if you can. If you can't, wait 5 minutes before running the check, because a check run right away can still report EXPOSED.
+
+Make sure Nginx does not serve the file:
+
+```nginx
+location ~ /\.user\.ini$ { deny all; }
+```
+
+(A generic `location ~ /\. { deny all; }` rule covers it too.)
 
 ## Verify
 
