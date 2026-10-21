@@ -1,47 +1,50 @@
 # LiteSpeed / OpenLiteSpeed
 
-LiteSpeed runs PHP through `lsphp` (LSAPI), and each `lsphp` version has its **own** `php.ini`.
+LiteSpeed runs PHP through `lsphp` (LSAPI). Each `lsphp` version is a **separate package with its own `php.ini`**, so every one of them has to be updated.
 
 ## Find the lsphp installs
 
 ```bash
 ls -d /usr/local/lsws/lsphp*                 # OpenLiteSpeed / LSWS packages
 ls /opt/alt/php*/etc/php.ini 2>/dev/null     # CloudLinux alt-php
-/usr/local/lsws/lsphp83/bin/php -i | grep 'Loaded Configuration File'
+/usr/local/lsws/lsphp83/bin/php -v
 ```
 
-Typical paths:
+## 1. Update (the only complete fix)
 
-- `/usr/local/lsws/lsphp83/etc/php/8.3/litespeed/php.ini` (Debian/Ubuntu packages)
-- `/usr/local/lsws/lsphp83/etc/php.ini` (RHEL packages)
-- `/usr/local/lsws/lsphp83/etc/php/8.3/mods-available/` (drop-ins)
+Fixed versions: **8.2.35, 8.3.36, 8.4.27, 8.5.12**. LiteSpeed publishes its `lsphp` builds separately, so check that a patched build is available for your version.
 
-Repeat for **every** `lsphp` version on the server.
+```bash
+# Debian / Ubuntu
+sudo apt update && sudo apt install --only-upgrade 'lsphp8*'
 
-## Apply
+# RHEL / Alma / Rocky
+sudo dnf upgrade 'lsphp8*'
 
-Add to each `php.ini` (or a drop-in in its `mods-available` directory):
-
-```ini
-session.upload_progress.enabled = 0
+# CloudLinux alt-php
+sudo yum update 'alt-php*'
 ```
 
-Then restart so running `lsphp` processes pick it up:
+Restart so no old `lsphp` worker survives:
 
 ```bash
 sudo /usr/local/lsws/bin/lswsctrl restart
 sudo pkill lsphp        # lsphp workers can outlive a graceful restart
 ```
 
-## `.htaccess` (LiteSpeed Enterprise)
+## 2. If you cannot update yet
 
-LiteSpeed Enterprise honours Apache-style PHP directives in `.htaccess`:
+These are partial mitigations. PHP says none of them is complete.
 
-```apache
-php_flag session.upload_progress.enabled off
+Add the following to each `lsphp` `php.ini` (for example `/usr/local/lsws/lsphp83/etc/php/8.3/litespeed/php.ini`), then restart as above:
+
+```ini
+session.upload_progress.enabled = 0
+post_max_size = 8M          ; 32M if you need uploads
+upload_max_filesize = 6M    ; keep below post_max_size
 ```
 
-OpenLiteSpeed does not read `php_flag` from `.htaccess`. Use `php.ini` or `.user.ini`.
+**Do not use `.user.ini` or `ini_set()`**: PHP's advisory says not to rely on them.
 
 ## Panels
 
@@ -53,3 +56,5 @@ OpenLiteSpeed does not read `php_flag` from `.htaccess`. Use `php.ini` or `.user
 ```bash
 sudo ../scripts/check-exposure.sh --webroot /home/site/public_html --url https://your-site
 ```
+
+*Not tested on LiteSpeed yet. Reports are welcome.*
